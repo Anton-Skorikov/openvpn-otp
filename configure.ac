@@ -1,4 +1,4 @@
-er_mod_salt,C_PREREQ([2.68])
+AC_PREREQ([2.68])
 AC_INIT([openvpn-otp], 20140112)
 AM_INIT_AUTOMAKE
 AC_CONFIG_SRCDIR([src])
