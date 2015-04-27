@@ -1,4 +1,4 @@
-AC_PREREQ([2.68])
+er_mod_salt,C_PREREQ([2.68])
 AC_INIT([openvpn-otp], 20140112)
 AM_INIT_AUTOMAKE
 AC_CONFIG_SRCDIR([src])
@@ -13,6 +13,7 @@ AC_PROG_CXX
 
 # Checks for libraries.
 AC_CHECK_LIB([crypto], [HMAC_CTX_init], [], [AC_MSG_ERROR([OpenSSL libraries required])])
+AC_CHECK_LIB([crypt], [main], [], [AC_MSG_ERROR([crypto libraries required])])
 
 # Checks for header files.
 AC_CHECK_HEADERS([inttypes.h netinet/in.h stdint.h string.h], [],
