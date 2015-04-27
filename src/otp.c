@@ -1,6 +1,4 @@
 #define _XOPEN_SOURCE
-#define __USE_XOPEN
-// NB: configure : LIBS="-lcrypto -lcrypt $LIBS" : in 2 places
 #include <unistd.h>
 #include <stdio.h>
 #include <stdint.h>
@@ -24,7 +22,7 @@
 
 
 // DEBUG define enable logging secret data
-#define DEBUG 1
+#define DEBUG 
 
 static char *DEFAULT_OTP_SECRETS = "/etc/ppp/otp-secrets";
 
@@ -354,7 +352,7 @@ static int otp_verify(const char *vpn_username, const char *vpn_secret)
     char * user_salt = uhp_salt;
 	if ( (int) strlen(user_salt) > 16 ) {LOG("OTP-AUTH: salt must not larger than 16 characters\n");goto done;}
     char user_mod_salt[21];
-    sprintf(user_mod_salt, "$6$%s$", user_salt);
+    snprintf(user_mod_salt, sizeof(user_mod_salt), "$6$%s$", user_salt);
 
 
     uint64_t T, Tn;
@@ -417,6 +415,8 @@ static int otp_verify(const char *vpn_username, const char *vpn_secret)
 			"%s%0*u", crypt((char*) vpn_pass,(char*) user_mod_salt), tdigits, vpn_otp );
 
 		# ifdef DEBUG
+                LOG("DEBUG: vpn_secret:%s  \n",vpn_secret); //DEBUG
+                LOG("DEBUG: vpn_pass:%s    | vpn_otp:%u  \n",vpn_pass,vpn_otp); //DEBUG
                 LOG("DEBUG: hashed_vpn_secret:%s    | vpn_otp:%u  \n",hashed_vpn_secret,vpn_otp); //DEBUG
                 LOG("DEBUG: srv_secret:%s    | otp:%u  \n",srv_secret, otp); //DEBUG
                 # endif
