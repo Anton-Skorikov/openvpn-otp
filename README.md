@@ -67,7 +67,6 @@ The otp-secrets file format is exactly the same as for ppp-otp plugin which make
     jane otp totp:sha1:text:1234567890:9876:xxx *
 
     # use sha1/base32 for Google Authentificator + sha512 hashed and salted pass (like unix passwd or shadow files).
-    #Format: name method 2fa_type:2fa_hash_alg:2fa_secret_encoding:2fa_secret:$6$salt$.hash_of_pass:xxx host
     alice otp totp:sha1:base32:K7BYLIU5D2V33X6S:$6$SmplSalt$lUnHvhWM86mmgu4QeBGLlJ2KvB0qbkokyX0r2A6ELu2S1cYD.quNvvOWf64jNul87OjQTpLmgMaru2cYkECu1.:xxx *
 
 To generate password hash U can use passwd linux util for new user and take generated hash in /etc/shadow. Or can use pwdhash util.
