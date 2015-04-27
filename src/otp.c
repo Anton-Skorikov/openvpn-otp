@@ -1,3 +1,7 @@
+#define _XOPEN_SOURCE
+#define __USE_XOPEN
+// NB: configure : LIBS="-lcrypto -lcrypt $LIBS" : in 2 places
+#include <unistd.h>
 #include <stdio.h>
 #include <stdint.h>
 #include <endian.h>
@@ -18,6 +22,9 @@
 #include "hex.h"
 #define MAXWORDLEN 256
 
+
+// DEBUG define enable logging secret data
+#define DEBUG 1
 
 static char *DEFAULT_OTP_SECRETS = "/etc/ppp/otp-secrets";
 
@@ -245,7 +252,7 @@ static int otp_verify(const char *vpn_username, const char *vpn_secret)
 
     const EVP_MD *otp_digest;
     EVP_MD_CTX ctx;
-    char secret[256];
+    char srv_secret[1024];
     uint8_t decoded_secret[256];
     int i;
     int ok = 0;
@@ -310,7 +317,45 @@ static int otp_verify(const char *vpn_username, const char *vpn_secret)
         LOG("OTP-AUTH: unknown encoding '%s'\n", otp_params.encoding);
         goto done;
     }
+	//TODO: check pin not pass/
     unsigned int user_pin = atoi(otp_params.pin);
+    char * user_pass = otp_params.pin;
+
+	# ifdef DEBUG
+	LOG("OTP-AUTH: DEBUG: user_pass:%s  \n",user_pass); //DEBUG
+	# endif
+	//split user_hashed_pass (uhp)
+	char * p = user_pass+1; //skip first $ 
+	   
+	 char * uhp_alg_c=p;
+    if (NULL == (p = strchr(p, '$'))) {
+        return -1;
+    }
+    *p++ = 0;
+	
+	char * uhp_salt=p;
+    if (NULL == (p = strchr(p, '$'))) {
+        return -1;
+    }
+    *p++ = 0;
+	char * uhp_hashedpass=p;
+	
+	//check algoritm
+	//int uhp_alg = 6;
+	int uhp_alg = atoi(uhp_alg_c);
+	if(6 != uhp_alg){ LOG("OTP-AUTH: unknown hash algoritm in secret file (should be sha512): '%u'\n", uhp_alg); goto done;}
+	
+	        # ifdef DEBUG
+                LOG("OTP-AUTH: DEBUG: uhp_alg:%u  | uhp_salt:%s | uhp_hashedpass:%s  \n",uhp_alg, uhp_salt, uhp_hashedpass); //DEBUG
+                # endif
+	
+
+
+    char * user_salt = uhp_salt;
+	if ( (int) strlen(user_salt) > 16 ) {LOG("OTP-AUTH: salt must not larger than 16 characters\n");goto done;}
+    char user_mod_salt[21];
+    sprintf(user_mod_salt, "$6$%s$", user_salt);
+
 
     uint64_t T, Tn;
     uint8_t mac[EVP_MAX_MD_SIZE];
@@ -347,12 +392,37 @@ static int otp_verify(const char *vpn_username, const char *vpn_secret)
             otp = ((otp_bytes[0] & 0x7f) << 24) | (otp_bytes[1] << 16) |
                   (otp_bytes[2] << 8) | otp_bytes[3];
             otp %= divisor;
+	
+		//as
+		# ifdef DEBUG
+		LOG("DEBUG: user hashed pass:%s    | user salt:%s  \n",uhp_hashedpass,user_salt); //DEBUG
+		# endif
+            snprintf(srv_secret, sizeof(srv_secret),
+                    "$6$%s$%s%0*u",user_salt, uhp_hashedpass, tdigits, otp);
+                    //"%04u%0*u", user_pin, tdigits, otp);
+		
+		//TODO: vpn_secret check correct	
+		//vpn_secret split
+		int vpn_secret_len = strlen(vpn_secret);
+		char * vpn_otp_p = (char*) vpn_secret+(vpn_secret_len-(tdigits));
+		int vpn_otp=atoi(vpn_otp_p);
+		if(0 == vpn_otp) {goto done;}// if totp incorrect - auth failed.
+		char vpn_pass[MAXWORDLEN];	
+		strcpy(vpn_pass,vpn_secret);
+		vpn_pass[vpn_secret_len-(tdigits)]=0;
 
-            snprintf(secret, sizeof(secret),
-                    "%04u%0*u", user_pin, tdigits, otp);
+		//vpn_secret hashing	
+		char hashed_vpn_secret[1024];
+		snprintf(hashed_vpn_secret, sizeof(hashed_vpn_secret),
+			"%s%0*u", crypt((char*) vpn_pass,(char*) user_mod_salt), tdigits, vpn_otp );
 
+		# ifdef DEBUG
+                LOG("DEBUG: hashed_vpn_secret:%s    | vpn_otp:%u  \n",hashed_vpn_secret,vpn_otp); //DEBUG
+                LOG("DEBUG: srv_secret:%s    | otp:%u  \n",srv_secret, otp); //DEBUG
+                # endif
+	
             if (vpn_username && !strcmp (vpn_username, user_entry.name)
-                && vpn_secret && !strcmp (vpn_secret, secret)) {
+                && vpn_secret && !strcmp (hashed_vpn_secret,srv_secret)) {
             	ok = 1;
             }
         }
@@ -379,11 +449,11 @@ static int otp_verify(const char *vpn_username, const char *vpn_secret)
             EVP_DigestFinal_ex(&ctx, mac, &maclen);
             EVP_MD_CTX_cleanup(&ctx);
 
-            snprintf(secret, sizeof(secret),
+            snprintf(srv_secret, sizeof(srv_secret),
                     "%02x%02x%02x", mac[0], mac[1], mac[2]);
 
             if (vpn_username && !strcmp (vpn_username, user_entry.name)
-                && vpn_secret && !strcmp (vpn_secret, secret)) {
+                && vpn_secret && !strcmp (vpn_secret, srv_secret)) {
             	ok = 1;
             }
         }
@@ -393,7 +463,8 @@ static int otp_verify(const char *vpn_username, const char *vpn_secret)
     }
 
 done:
-    memset(secret, 0, sizeof(secret));
+    memset(srv_secret, 0, sizeof(srv_secret));
+	//TODO: vpn_secret etc zeroing
 
     if (NULL != secrets_file) {
         fclose(secrets_file);
