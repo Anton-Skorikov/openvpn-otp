@@ -71,15 +71,18 @@ The otp-secrets file format is exactly the same as for ppp-otp plugin which make
     alice otp totp:sha1:base32:K7BYLIU5D2V33X6S:$6$SmplSalt$lUnHvhWM86mmgu4QeBGLlJ2KvB0qbkokyX0r2A6ELu2S1cYD.quNvvOWf64jNul87OjQTpLmgMaru2cYkECu1.:xxx *
 
 To generate password hash U can use passwd linux util for new user and take generated hash in /etc/shadow. Or can use pwdhash util.
-    #./pwdhash 'p@@$$w0rD' 's@Lt.examPL3'
+    #./pwdhash 'p@$$w0rD' 'sLt.exmp'
  
 When users vpn in, they will need to provide their username and pin+current OTP number from the OTP token. Example for user bob:
 
     username: bob
     password: 1234920151
-  or
+
+  or example for user alice:
+
     username: alice
-    password: p@@$$w0rD717302
+    password: p@$$w0rD717302
+
 
 Troubleshooting
 ===============
