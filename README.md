@@ -54,7 +54,7 @@ The otp-secrets file format is exactly the same as for ppp-otp plugin which make
     #       hash should be sha1 in most cases
     #       encoding is base32, hex or text
     #       key is your key in encoding format
-    #       pin is a 4-6 digit pin
+    #       pin is a 4-6 digit pin or hash of good password
     #       udid is used in motp mode
     #
     # use sha1/base32 for Google Authenticator
@@ -65,12 +65,21 @@ The otp-secrets file format is exactly the same as for ppp-otp plugin which make
     
     # use text encoding for clients supporting plain text keys
     jane otp totp:sha1:text:1234567890:9876:xxx *
-    
+
+    # use sha1/base32 for Google Authentificator + sha512 hashed and salted pass (like unix passwd or shadow files).
+    #Format: name method 2fa_type:2fa_hash_alg:2fa_secret_encoding:2fa_secret:$6$salt$.hash_of_pass:xxx host
+    alice otp totp:sha1:base32:K7BYLIU5D2V33X6S:$6$SmplSalt$lUnHvhWM86mmgu4QeBGLlJ2KvB0qbkokyX0r2A6ELu2S1cYD.quNvvOWf64jNul87OjQTpLmgMaru2cYkECu1.:xxx *
+
+To generate password hash U can use passwd linux util for new user and take generated hash in /etc/shadow. Or can use pwdhash util.
+    #./pwdhash 'p@@$$w0rD' 's@Lt.examPL3'
+ 
 When users vpn in, they will need to provide their username and pin+current OTP number from the OTP token. Example for user bob:
 
     username: bob
     password: 1234920151
-
+  or
+    username: alice
+    password: p@@$$w0rD717302
 
 Troubleshooting
 ===============
